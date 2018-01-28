@@ -77,12 +77,12 @@ function category_color($category) {
   return $color;
 }
 
-$db = new SQLite3('projects.sqlite');
+$db = new PDO('sqlite:projects.sqlite');
 
 $results = $db->query('SELECT projects.rowid, title, category, description, COALESCE(votes, 0) AS votes '.
     'FROM projects LEFT JOIN (SELECT projectid, sum(updown) AS votes FROM votes GROUP BY projectid) on projects.rowid = projectid '.
     'ORDER BY votes DESC, category, title');
-while ($row = $results->fetchArray()) {
+foreach ($results as $row) {
   echo '<li class="list-group-item">';
 	
   echo '<div class="d-flex justify-content-between align-items-center">';
