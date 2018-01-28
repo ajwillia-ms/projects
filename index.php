@@ -79,6 +79,19 @@ function category_color($category) {
 
 $db = new PDO('sqlite:projects.sqlite');
 
+$query = $db->prepare('SELECT projectid, updown '.
+    'FROM votes '.
+    'WHERE user = :user');
+$query->execute(array(':user' => $auth_user));
+$votes = Array();
+
+foreach ($query as $vote) {
+  $votes[$vote['projectid']] = $vote['updown'];
+}
+
+if (count($votes) > 0)
+  echo '<p>You have voted '.count($votes).' times.</p>';
+
 $results = $db->query('SELECT projects.rowid, title, category, description, COALESCE(votes, 0) AS votes '.
     'FROM projects LEFT JOIN (SELECT projectid, sum(updown) AS votes FROM votes GROUP BY projectid) on projects.rowid = projectid '.
     'ORDER BY votes DESC, category, title');
@@ -91,8 +104,28 @@ foreach ($results as $row) {
     echo '    <span class="badge badge-pill '.category_color($row['category']).'">'.$row['category'].'</span>';
   echo '  </span>';
  
-  if ($row['votes'] > 0)
-    echo '<span class="badge badge-pill badge-secondary">'.$row['votes'].'</span>';
+  if ($auth_user) {
+    echo '<div class="btn-group">';
+    if ($row['votes'] > 0) {
+      $disabled = '';
+      if ($votes[$row['rowid']] > 0)
+        $disabled = ' disabled';
+      echo '  <a class="btn btn-secondary'.$disabled.'" style="padding-right: 0" href="?vote=up&project='.$row['rowid'].'"><i class="fa fa-arrow-up" aria-hidden="true"></i></a>';
+
+      echo '  <span class="badge badge-secondary" style="border-radius: 0; cursor: default;">'.$row['votes'].'</span>';
+
+      $disabled = '';
+      if ($votes[$row['rowid']] < 0)
+        $disabled = ' disabled';
+      echo '  <a class="btn btn-secondary'.$disabled.'" style="padding-left: 0" href="?vote=down&project='.$row['rowid'].'"><i class="fa fa-arrow-down" aria-hidden="true"></i></a>';
+    } else {
+      echo '  <a class="btn btn-secondary" href="?vote=up&project='.$row['rowid'].'"><i class="fa fa-arrow-up" aria-hidden="true"></i></a>';
+    }
+    echo '</div>';
+  } else {
+    if ($row['votes'] > 0)
+      echo '<span class="badge badge-pill badge-secondary">'.$row['votes'].'</span>';
+  }
 
   echo '</div>';
   echo '<small>'.$row['description'].'</small>';
